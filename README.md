@@ -1,2 +1,3 @@
-# Simulador-SO
-Implementar un simulador de asignación de memoria y planificación de procesos.
+# Simulador de Asignación de Memoria y Planificación de procesos
+UTN FRRe
+SISTEMAS OPERATIVOS 2024 - TRABAJO PRACTICO
