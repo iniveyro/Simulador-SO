@@ -39,14 +39,18 @@ class GestorDeMemoria:
 
 
         # Asigna el bloque encontrado si es válido
-        if mejor_bloque_index != -1:
-            self.particiones[list(self.particiones.keys())[mejor_bloque_index]] -= proceso.memoria_necesaria
-            self.procesos_en_memoria.append(proceso)
-            print(f"Memoria asignada a {proceso.pid}: {proceso.memoria_necesaria} unidades en bloque de tamaño {mejor_bloque}.")
-            return True
-        else:
-            print(f"Memoria insuficiente para {proceso.pid}.")
-            return False
+        
+        if proceso.memoria_necesaria <= 250:
+            if mejor_bloque_index != -1:
+                self.particiones[list(self.particiones.keys())[mejor_bloque_index]] -= proceso.memoria_necesaria
+                self.procesos_en_memoria.append(proceso)
+                print(f"Memoria asignada a {proceso.pid}: {proceso.memoria_necesaria} unidades en bloque de tamaño {mejor_bloque}.")
+                return True
+            else:
+                print(f"Memoria insuficiente para {proceso.pid}.")
+                listo_susp.append(proceso)
+                procesos.remove(proceso)
+                return False
 
     def liberar_memoria(self, proceso):
         # Libera la memoria ocupada por el proceso
@@ -60,12 +64,17 @@ class GestorDeMemoria:
 
 class GestorDeProcesos:
     def __init__(self, quantum=3):
-        self.cola_procesos = deque()
+        self.cola_procesos = deque() #Lista de procesos Corriendo
         self.quantum = quantum
 
     def agregar_proceso(self, proceso):
         self.cola_procesos.append(proceso)
         print(f"Proceso {proceso.pid} agregado a la cola.")
+
+    #!!!!
+    def mover_proceso(self, proceso):
+        self.cola_procesos.append(listo_susp(0))
+        listo_susp.remove()
 
     def ejecutar_procesos(self, gestor_memoria):
         # Ejecuta los procesos en la cola usando Round-Robin
@@ -87,7 +96,7 @@ class GestorDeProcesos:
             else:
                 print(f"Proceso {proceso.pid} completado.")
                 gestor_memoria.liberar_memoria(proceso)  # Liberar memoria del proceso completado
-
+    
 
 def cargar_procesos_manual():
     procesos = []
@@ -140,9 +149,10 @@ if __name__ == "__main__":
             if gestor_memoria.asignar_memoria(proceso):
                 gestor_procesos.agregar_proceso(proceso)
                 procesos.remove(proceso) 
-            elif len(listo_susp) < 2:
-                listo_susp.append(proceso)
-                procesos.remove(proceso)
 
         gestor_procesos.ejecutar_procesos(gestor_memoria)
-        #print (f" --- Nro de procesos restantes = {len (procesos)} --- ")
+        #print (f" --- Procesos en listo y suspendido = {listo_susp.getattr(pid)} --- ")
+    
+    # Listado de elementos en lista Listos-Suspendidos
+    #for proceso in listo_susp:
+    #    print(proceso.pid)
