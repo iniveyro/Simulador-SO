@@ -3,103 +3,87 @@ import os
 
 class Proceso:
     def __init__(self, pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion):
-        # Inicializa un proceso con su ID, memoria necesaria, tiempo de arribo y tiempo de irrupción.
-        self.pid = pid  # ID del proceso
-        self.memoria_necesaria = memoria_necesaria  # Memoria que necesita el proceso
-        self.tiempo_de_arribo = tiempo_de_arribo  # Momento en el que el proceso está listo
-        self.tiempo_de_irrupcion = tiempo_de_irrupcion  # Tiempo total de CPU que necesita
-        self.tiempo_restante = tiempo_de_irrupcion  # Tiempo que queda para completar la ejecución
+        self.pid = pid
+        self.memoria_necesaria = memoria_necesaria
+        self.tiempo_de_arribo = tiempo_de_arribo
+        self.tiempo_de_irrupcion = tiempo_de_irrupcion
+        self.tiempo_restante = tiempo_de_irrupcion
 
     def __str__(self):
         return (f"Proceso {self.pid} - Tiempo restante: {self.tiempo_restante}, "
                 f"Tiempo de arribo: {self.tiempo_de_arribo}, Tiempo de irrupción: {self.tiempo_de_irrupcion}")
 
-
 class GestorDeMemoria:
     def __init__(self):
-        # Particiones fijas definidas según los requisitos.
         self.particiones = {
-            'grande': 250,  # Para trabajos grandes
-            'mediano': 150, # Para trabajos medianos
-            'pequeño': 50   # Para trabajos pequeños
+            'grande': 250,
+            'mediano': 150,
+            'pequeño': 50
         }
-        self.procesos_en_memoria = []  # Lista para mantener los procesos asignados
+        self.procesos_en_memoria = []
 
     def asignar_memoria(self, proceso):
-        # Verifica si hay espacio suficiente según Worst-Fit
         mejor_bloque = None
         mejor_bloque_index = -1
 
-        # Busca la partición más grande que pueda albergar el proceso
         for i, (nombre, bloque) in enumerate(self.particiones.items()):
             if bloque >= proceso.memoria_necesaria:
                 if mejor_bloque is None or bloque > mejor_bloque:
                     mejor_bloque = bloque
                     mejor_bloque_index = i
 
-
-        # Asigna el bloque encontrado si es válido
-        
-        if proceso.memoria_necesaria <= 250:
-            if mejor_bloque_index != -1:
-                self.particiones[list(self.particiones.keys())[mejor_bloque_index]] -= proceso.memoria_necesaria
-                self.procesos_en_memoria.append(proceso)
-                print(f"Memoria asignada a {proceso.pid}: {proceso.memoria_necesaria} unidades en bloque de tamaño {mejor_bloque}.")
-                return True
-            else:
-                print(f"Memoria insuficiente para {proceso.pid}.")
-                listo_susp.append(proceso)
-                procesos.remove(proceso)
-                return False
+        if mejor_bloque_index != -1:
+            self.particiones[list(self.particiones.keys())[mejor_bloque_index]] -= proceso.memoria_necesaria
+            self.procesos_en_memoria.append(proceso)
+            print(f"Memoria asignada a {proceso.pid}: {proceso.memoria_necesaria} unidades en bloque de tamaño {mejor_bloque}.")
+            return True
+        else:
+            print(f"Memoria insuficiente para {proceso.pid}.")
+            return False
 
     def liberar_memoria(self, proceso):
-        # Libera la memoria ocupada por el proceso
         self.procesos_en_memoria.remove(proceso)
-        # Devolver la memoria al bloque correspondiente
         for nombre in self.particiones.keys():
             self.particiones[nombre] += proceso.memoria_necesaria
             print(f"Memoria liberada de {proceso.pid}: {proceso.memoria_necesaria} unidades.")
             return
 
-
 class GestorDeProcesos:
     def __init__(self, quantum=3):
-        self.cola_procesos = deque() #Lista de procesos Corriendo
+        self.cola_procesos = deque()
         self.quantum = quantum
 
     def agregar_proceso(self, proceso):
         self.cola_procesos.append(proceso)
         print(f"Proceso {proceso.pid} agregado a la cola.")
 
-    #!!!!
-    def mover_proceso(self, proceso):
-        self.cola_procesos.append(listo_susp(0))
-        listo_susp.remove()
-
     def ejecutar_procesos(self, gestor_memoria):
-        # Ejecuta los procesos en la cola usando Round-Robin
-        tiempo_actual = 0  # Mantiene el tiempo total de ejecución
+        tiempo_actual = 0
         while self.cola_procesos:
             proceso = self.cola_procesos.popleft()
-            # Esperar hasta que el proceso llegue
             if tiempo_actual < proceso.tiempo_de_arribo:
                 tiempo_actual = proceso.tiempo_de_arribo
 
             tiempo_ejecucion = min(self.quantum, proceso.tiempo_restante)
             proceso.tiempo_restante -= tiempo_ejecucion
-            tiempo_actual += tiempo_ejecucion  # Actualiza el tiempo total
+            tiempo_actual += tiempo_ejecucion
 
             print(f"Ejecutando {proceso.pid} por {tiempo_ejecucion} unidades de tiempo. Tiempo restante: {proceso.tiempo_restante}")
 
             if proceso.tiempo_restante > 0:
-                self.cola_procesos.append(proceso)  # Si no ha terminado, agregar de nuevo a la cola
+                self.cola_procesos.append(proceso)
             else:
                 print(f"Proceso {proceso.pid} completado.")
-                gestor_memoria.liberar_memoria(proceso)  # Liberar memoria del proceso completado
-    
+                gestor_memoria.liberar_memoria(proceso)
+
+                # Intenta cargar un proceso de listo_susp si hay espacio en memoria
+                if listo_susp:
+                    proceso_susp = listo_susp.popleft()
+                    if gestor_memoria.asignar_memoria(proceso_susp):
+                        self.agregar_proceso(proceso_susp)
 
 def cargar_procesos_manual():
-    procesos = []
+    procesos = deque()
     num_procesos = int(input("Ingrese el número de procesos (máx. 10): "))
     if num_procesos > 10:
         print("Se permiten un máximo de 10 procesos.")
@@ -112,9 +96,8 @@ def cargar_procesos_manual():
         procesos.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
     return procesos
 
-
 def cargar_procesos_archivo():
-    procesos = []
+    procesos = deque()
     try:
         with open((os.path.abspath('')+'/procesos.csv'), 'r') as file:
             for linea in file:
@@ -126,13 +109,22 @@ def cargar_procesos_archivo():
         print("Permiso denegado. Asegúrate de que el archivo no esté en uso o que tengas permiso para acceder.")
     return procesos
 
+def asignacionProcesos(lista):
+    while lista and len(gestor_memoria.procesos_en_memoria) < 3:
+        proceso = lista.popleft()
+        if gestor_memoria.asignar_memoria(proceso):
+            gestor_procesos.agregar_proceso(proceso)
+        else:
+            listo_susp.append(proceso)
+
+    while lista and len(listo_susp) < 2:
+        listo_susp.append(lista.popleft())
 
 if __name__ == "__main__":
     gestor_memoria = GestorDeMemoria()
     gestor_procesos = GestorDeProcesos(quantum=3)
 
-    listo_susp = []
-    suspendidos = []
+    listo_susp = deque()
 
     metodo = input("Seleccione el método de carga de procesos (1: manual/2: archivo): ").strip().lower()
     if metodo == '1':
@@ -144,15 +136,6 @@ if __name__ == "__main__":
         exit()
 
     while len(procesos) != 0:
-        for proceso in procesos:
-            # Asignar memoria y agregar a la cola de procesos
-            if gestor_memoria.asignar_memoria(proceso):
-                gestor_procesos.agregar_proceso(proceso)
-                procesos.remove(proceso) 
-
+        asignacionProcesos(procesos)
         gestor_procesos.ejecutar_procesos(gestor_memoria)
-        #print (f" --- Procesos en listo y suspendido = {listo_susp.getattr(pid)} --- ")
-    
-    # Listado de elementos en lista Listos-Suspendidos
-    #for proceso in listo_susp:
-    #    print(proceso.pid)
+
