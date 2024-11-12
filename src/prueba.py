@@ -13,40 +13,46 @@ class Proceso:
         return (f"Proceso {self.pid} - Tiempo restante: {self.tiempo_restante}, "
                 f"Tiempo de arribo: {self.tiempo_de_arribo}, Tiempo de irrupción: {self.tiempo_de_irrupcion}")
 
+class Particion:
+    def __init__(self, nombre, tamano):
+        self.nombre = nombre
+        self.tamano = tamano
+        self.ocupada = False
+        self.proceso_asignado = None
+
 class GestorDeMemoria:
     def __init__(self):
-        self.particiones = {
-            'grande': 250,
-            'mediano': 150,
-            'pequeño': 50
-        }
-        self.procesos_en_memoria = []
+        self.particiones = [
+            Particion('grande', 250),
+            Particion('mediano', 150),
+            Particion('pequeño', 50)
+        ]
 
     def asignar_memoria(self, proceso):
         mejor_bloque = None
-        mejor_bloque_index = -1
 
-        for i, (nombre, bloque) in enumerate(self.particiones.items()):
-            if bloque >= proceso.memoria_necesaria:
-                if mejor_bloque is None or bloque > mejor_bloque:
-                    mejor_bloque = bloque
-                    mejor_bloque_index = i
+        # Busca la partición más grande (Worst-Fit) que pueda albergar el proceso y que esté libre
+        for particion in self.particiones:
+            if not particion.ocupada and particion.tamano >= proceso.memoria_necesaria:
+                if mejor_bloque is None or particion.tamano > mejor_bloque.tamano:
+                    mejor_bloque = particion
 
-        if mejor_bloque_index != -1:
-            self.particiones[list(self.particiones.keys())[mejor_bloque_index]] -= proceso.memoria_necesaria
-            self.procesos_en_memoria.append(proceso)
-            print(f"Memoria asignada a {proceso.pid}: {proceso.memoria_necesaria} unidades en bloque de tamaño {mejor_bloque}.")
+        if mejor_bloque:
+            mejor_bloque.ocupada = True
+            mejor_bloque.proceso_asignado = proceso
+            print(f"Memoria asignada a {proceso.pid}: {proceso.memoria_necesaria} unidades en bloque '{mejor_bloque.nombre}' de tamaño {mejor_bloque.tamano}.")
             return True
         else:
             print(f"Memoria insuficiente para {proceso.pid}.")
             return False
 
     def liberar_memoria(self, proceso):
-        self.procesos_en_memoria.remove(proceso)
-        for nombre in self.particiones.keys():
-            self.particiones[nombre] += proceso.memoria_necesaria
-            print(f"Memoria liberada de {proceso.pid}: {proceso.memoria_necesaria} unidades.")
-            return
+        for particion in self.particiones:
+            if particion.proceso_asignado == proceso:
+                particion.ocupada = False
+                particion.proceso_asignado = None
+                print(f"Memoria liberada de {proceso.pid}: {proceso.memoria_necesaria} unidades en bloque '{particion.nombre}'.")
+                return
 
 class GestorDeProcesos:
     def __init__(self, quantum=3):
@@ -82,20 +88,6 @@ class GestorDeProcesos:
                     if gestor_memoria.asignar_memoria(proceso_susp):
                         self.agregar_proceso(proceso_susp)
 
-def cargar_procesos_manual():
-    procesos = deque()
-    num_procesos = int(input("Ingrese el número de procesos (máx. 10): "))
-    if num_procesos > 10:
-        print("Se permiten un máximo de 10 procesos.")
-        return []
-    for _ in range(num_procesos):
-        pid = int(input("PID del proceso: "))
-        memoria_necesaria = int(input("Memoria necesaria: "))
-        tiempo_de_arribo = int(input("Tiempo de arribo: "))
-        tiempo_de_irrupcion = int(input("Tiempo de irrupción: "))
-        procesos.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
-    return procesos
-
 def cargar_procesos_archivo():
     procesos = deque()
     try:
@@ -110,7 +102,7 @@ def cargar_procesos_archivo():
     return procesos
 
 def asignacionProcesos(lista):
-    while lista and len(gestor_memoria.procesos_en_memoria) < 3:
+    while lista and len(gestor_memoria.particiones) > len([p for p in gestor_memoria.particiones if p.ocupada]):
         proceso = lista.popleft()
         if gestor_memoria.asignar_memoria(proceso):
             gestor_procesos.agregar_proceso(proceso)
@@ -138,4 +130,3 @@ if __name__ == "__main__":
     while len(procesos) != 0:
         asignacionProcesos(procesos)
         gestor_procesos.ejecutar_procesos(gestor_memoria)
-
