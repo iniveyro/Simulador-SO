@@ -1,4 +1,5 @@
 from collections import deque
+import time
 import os
 
 class Proceso:
@@ -19,13 +20,16 @@ class Particion:
         self.tamano = tamano
         self.ocupada = False
         self.proceso_asignado = None
+    
+    def info(self):
+        print(self.nombre, self.tamano)
 
 class GestorDeMemoria:
     def __init__(self):
         self.particiones = [
-            Particion('grande', 250),
-            Particion('mediano', 150),
-            Particion('pequeño', 50)
+            Particion('Grande', 250),
+            Particion('Mediano', 150),
+            Particion('Pequeño', 50)
         ]
 
     def asignar_memoria(self, proceso):
@@ -80,6 +84,12 @@ class GestorDeProcesos:
                 self.cola_procesos.append(proceso)
             else:
                 print(f"Proceso {proceso.pid} completado.")
+                print(' ')
+                print('---------------------------------------------------------------------')
+                print(' ')
+                discos(gestor_memoria)
+                print(' ')
+                time.sleep(3)
                 gestor_memoria.liberar_memoria(proceso)
 
                 # Intenta cargar un proceso de listo_susp si hay espacio en memoria
@@ -87,6 +97,7 @@ class GestorDeProcesos:
                     proceso_susp = listo_susp.popleft()
                     if gestor_memoria.asignar_memoria(proceso_susp):
                         self.agregar_proceso(proceso_susp)
+        
 
 def cargar_procesos_archivo():
     procesos = deque()
@@ -111,14 +122,27 @@ def asignacionProcesos(lista):
 
     while lista and len(listo_susp) < 2:
         listo_susp.append(lista.popleft())
+        
+def cargar_procesos_manual():
+    print('cargar manual')
+    
+def discos(memo):
+    print('Particion ',memo.particiones[0].nombre, ' con ',memo.particiones[0].tamano, ' de memoria disponible')
+    print('Particion ',memo.particiones[1].nombre, ' con ',memo.particiones[1].tamano, ' de memoria disponible')
+    print('Particion ',memo.particiones[2].nombre, ' con ',memo.particiones[2].tamano, ' de memoria disponible')
 
 if __name__ == "__main__":
     gestor_memoria = GestorDeMemoria()
     gestor_procesos = GestorDeProcesos(quantum=3)
 
     listo_susp = deque()
-
+    
+    #print(gestor_memoria.particiones[0].info())
+    print(' ')
+    discos(gestor_memoria)
+    print(' ')
     metodo = input("Seleccione el método de carga de procesos (1: manual/2: archivo): ").strip().lower()
+    print('---------------------------------------------------------------------')
     if metodo == '1':
         procesos = cargar_procesos_manual()
     elif metodo == '2':
