@@ -13,7 +13,13 @@ class Proceso:
     def __str__(self):
         return (f"Proceso {self.pid} - Tiempo restante: {self.tiempo_restante}, "
                 f"Tiempo de arribo: {self.tiempo_de_arribo}, Tiempo de irrupción: {self.tiempo_de_irrupcion}")
-
+        
+    def show(self):
+        print('pid: ', self.pid)
+        print('memoria necesaria: ', self.memoria_necesaria)
+        print('tiempo de arribo: ', self.tiempo_de_arribo)
+        print('tiempo de irrupcion: ', self.tiempo_de_irrupcion)
+        
 class Particion:
     def __init__(self, nombre, tamano):
         self.nombre = nombre
@@ -87,9 +93,8 @@ class GestorDeProcesos:
                 print(' ')
                 print('---------------------------------------------------------------------')
                 print(' ')
-                discos(gestor_memoria)
                 print(' ')
-                time.sleep(3)
+                time.sleep(2)
                 gestor_memoria.liberar_memoria(proceso)
 
                 # Intenta cargar un proceso de listo_susp si hay espacio en memoria
@@ -101,11 +106,19 @@ class GestorDeProcesos:
 
 def cargar_procesos_archivo():
     procesos = deque()
+    global sumaTA
+    global sumaTR
+    global num_procesos
+    global listafinal
     try:
         with open((os.path.abspath('')+'/procesos.csv'), 'r') as file:
             for linea in file:
                 pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion = map(int, linea.strip().split(','))
+                sumaTA = sumaTA + tiempo_de_arribo
+                sumaTR = sumaTR + tiempo_de_irrupcion
+                num_procesos = num_procesos + 1
                 procesos.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
+                listafinal.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
     except FileNotFoundError:
         print("El archivo no se encontró. Asegúrate de ingresar la ruta correcta.")
     except PermissionError:
@@ -124,7 +137,25 @@ def asignacionProcesos(lista):
         listo_susp.append(lista.popleft())
         
 def cargar_procesos_manual():
-    print('cargar manual')
+    global sumaTA
+    global sumaTR
+    global num_procesos
+    global listafinal
+    procesos = deque()
+    num_procesos = int(input("Ingrese el número de procesos (máx. 10): "))
+    if num_procesos > 10:
+        print("Se permiten un máximo de 10 procesos.")
+        return []
+    for _  in range(num_procesos):
+        pid = int(input("PID del proceso: "))
+        memoria_necesaria = int(input("Memoria necesaria: "))
+        tiempo_de_arribo = int(input("Tiempo de arribo: "))
+        sumaTA = sumaTA + tiempo_de_arribo
+        tiempo_de_irrupcion = int(input("Tiempo de irrupción: "))
+        sumaTR = sumaTR + tiempo_de_irrupcion
+        procesos.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
+        listafinal.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
+    return procesos
     
 def discos(memo):
     print('Particion ',memo.particiones[0].nombre, ' con ',memo.particiones[0].tamano, ' de memoria disponible')
@@ -132,6 +163,12 @@ def discos(memo):
     print('Particion ',memo.particiones[2].nombre, ' con ',memo.particiones[2].tamano, ' de memoria disponible')
 
 if __name__ == "__main__":
+    sumaTEP = 0
+    sumaTA = 0
+    sumaTR = 0
+    num_procesos = 0
+    listafinal= []
+    inicio = time.time()
     gestor_memoria = GestorDeMemoria()
     gestor_procesos = GestorDeProcesos(quantum=3)
 
@@ -154,3 +191,18 @@ if __name__ == "__main__":
     while len(procesos) != 0:
         asignacionProcesos(procesos)
         gestor_procesos.ejecutar_procesos(gestor_memoria)
+    
+    fin = time.time()
+    print(' ')
+    print('Lista de Procesos Totales: ')
+    for i in range(num_procesos):
+        
+        print(listafinal[i].show())
+        print('____________________')
+        time.sleep(1)
+        
+    print(' ')
+    print('El rendimiento del sistema para la simulacion es de un trabajo terminado en ', (sumaTR - sumaTA)/num_procesos, ' unidades de tiempo')
+    print('Tiempo de Retorno promedio: ', (sumaTR - sumaTA)/num_procesos)
+    print('Tiempo de Espera promedio: ', sumaTR/num_procesos)
+    print('Tiempo de ejecucion total: ',fin-inicio, ' segundos')
