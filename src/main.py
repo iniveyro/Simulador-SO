@@ -95,6 +95,7 @@ class GestorDeProcesos:
                 print(' ')
                 print(' ')
                 time.sleep(2)
+                #El
                 gestor_memoria.liberar_memoria(proceso)
 
                 # Intenta cargar un proceso de listo_susp si hay espacio en memoria

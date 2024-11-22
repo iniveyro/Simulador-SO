@@ -1,0 +1,6 @@
+# En este archivo van las librerias externas necesarias para instalarlas automaticamente con los scripts .sh o .bat
+markdown-it-py==3.0.0
+mdurl==0.1.2
+Pygments==2.18.0
+rich==13.9.2
+pyinstaller==6.11.1
