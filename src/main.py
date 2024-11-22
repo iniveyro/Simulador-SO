@@ -117,6 +117,10 @@ class GestorDeProcesos:
                     if gestor_memoria.asignar_memoria(proceso_susp):
                         self.agregar_proceso(proceso_susp)
 
+import tkinter as tk
+from tkinter import filedialog
+
+# Modificamos la función de carga de procesos
 def cargar_procesos_archivo():
     procesos = deque()
     global sumaTA
@@ -152,6 +156,8 @@ def cargar_procesos_archivo():
         print("No se seleccionó ningún archivo.")
 
     return procesos
+
+
 
 def asignacionProcesos(lista):
     while lista and len(gestor_memoria.particiones) > len([p for p in gestor_memoria.particiones if p.ocupada]):
