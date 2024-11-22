@@ -3,9 +3,10 @@ import time
 import os
 from rich.console import Console
 from rich.table import Table
+import tkinter as tk
+from tkinter import filedialog
 
 console = Console()
-
 
 class Proceso:
     def __init__(self, pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion):
@@ -15,6 +16,7 @@ class Proceso:
         self.tiempo_de_irrupcion = tiempo_de_irrupcion
         self.tiempo_restante = tiempo_de_irrupcion
         self.estado = None
+        self.momento_terminacion = 0
 
     def __str__(self):
         return (f"Proceso {self.pid} - Tiempo restante: {self.tiempo_restante}, "
@@ -96,26 +98,24 @@ class GestorDeProcesos:
 
             #print(f"Ejecutando {proceso.pid} por {tiempo_ejecucion} unidades de tiempo. Tiempo restante: {proceso.tiempo_restante}")
 
-            mostrar_estado(procesos, gestor_memoria)
-
             if proceso.tiempo_restante > 0:
                 self.cola_procesos.append(proceso)
             else:
+                gestor_memoria.liberar_memoria(proceso)
+                mostrar_estado(procesos, gestor_memoria)
                 print(f"Proceso {proceso.pid} completado.")
+                proceso.momento_terminacion = tiempo_actual
                 print(' ')
                 print('---------------------------------------------------------------------')
                 print(' ')
                 print(' ')
                 input("Presionar Enter para analizar el siguiente proceso")
 
-                gestor_memoria.liberar_memoria(proceso)
-
                 # Intenta cargar un proceso de listo_susp si hay espacio en memoria
                 if listo_susp:
                     proceso_susp = listo_susp.popleft()
                     if gestor_memoria.asignar_memoria(proceso_susp):
                         self.agregar_proceso(proceso_susp)
-        
 
 def cargar_procesos_archivo():
     procesos = deque()
@@ -123,19 +123,34 @@ def cargar_procesos_archivo():
     global sumaTR
     global num_procesos
     global listafinal
-    try:
-        with open((os.path.abspath('')+'/procesos.csv'), 'r') as file:
-            for linea in file:
-                pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion = map(int, linea.strip().split(','))
-                sumaTA = sumaTA + tiempo_de_arribo
-                sumaTR = sumaTR + tiempo_de_irrupcion
-                num_procesos = num_procesos + 1
-                procesos.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
-                listafinal.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
-    except FileNotFoundError:
-        print("El archivo no se encontró. Asegúrate de ingresar la ruta correcta.")
-    except PermissionError:
-        print("Permiso denegado. Asegúrate de que el archivo no esté en uso o que tengas permiso para acceder.")
+
+    # Crear una ventana oculta para usar el explorador de archivos
+    root = tk.Tk()
+    root.withdraw()  # Ocultar la ventana principal de tkinter
+
+    # Abrir el cuadro de diálogo para elegir un archivo
+    archivo = filedialog.askopenfilename(
+        title="Selecciona un archivo CSV",
+        filetypes=(("Archivos CSV", "*.csv"), ("Todos los archivos", "*.*"))
+    )
+
+    if archivo:  # Si el archivo fue seleccionado
+        try:
+            with open(archivo, 'r') as file:
+                for linea in file:
+                    pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion = map(int, linea.strip().split(','))
+                    sumaTA = sumaTA + tiempo_de_arribo
+                    sumaTR = sumaTR + tiempo_de_irrupcion
+                    num_procesos = num_procesos + 1
+                    procesos.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
+                    listafinal.append(Proceso(pid, memoria_necesaria, tiempo_de_arribo, tiempo_de_irrupcion))
+        except FileNotFoundError:
+            print("El archivo no se encontró. Asegúrate de ingresar la ruta correcta.")
+        except PermissionError:
+            print("Permiso denegado. Asegúrate de que el archivo no esté en uso o que tengas permiso para acceder.")
+    else:
+        print("No se seleccionó ningún archivo.")
+
     return procesos
 
 def asignacionProcesos(lista):
@@ -243,18 +258,24 @@ def calcular_tiempos(procesos, quantum):
 
         # Si el proceso termina
         if proceso.tiempo_restante == 0:
-            tiempo_espera_total += tiempo_actual - proceso.tiempo_de_arribo - proceso.tiempo_de_irrupcion
-            tiempo_retorno_total += tiempo_actual - proceso.tiempo_de_arribo
+            # Asignar momento de terminación al proceso
+            proceso.momento_terminacion = tiempo_actual
+
+            # Calcular tiempo de retorno (TR) para cada proceso
+            tr = proceso.momento_terminacion - proceso.tiempo_de_arribo
+            tiempo_retorno_total += tr
+
+            # Calcular tiempo de espera (TE) para cada proceso
+            te = tr - proceso.tiempo_de_irrupcion
+            tiempo_espera_total += te
         else:
             cola.append(proceso)
 
     # Calcula promedios
     n = len(procesos)
-    tiempo_respuesta_total = sum(tiempos_respuesta.values())
     tiempos = {
         "promedio_espera": tiempo_espera_total / n,
         "promedio_retorno": tiempo_retorno_total / n,
-        "promedio_respuesta": tiempo_respuesta_total / n,
     }
 
     return tiempos
@@ -262,49 +283,40 @@ def calcular_tiempos(procesos, quantum):
 
 def generar_informe(procesos, tiempos, tiempo_total_ejecucion):
     """
-    Genera un informe final con el estado de cada proceso, los tiempos promedio y el rendimiento del sistema.
+    Genera un informe final con el estado de cada proceso y los tiempos promedio.
     """
-    # Crear tabla de procesos con sus tiempos de espera y retorno
     tabla_procesos = Table(title="Informe Final de Procesos")
     tabla_procesos.add_column("PID", justify="right")
     tabla_procesos.add_column("Tiempo de Arribo", justify="right")
     tabla_procesos.add_column("Tiempo de Irrupción", justify="right")
-    tabla_procesos.add_column("Tiempo de Espera", justify="right")
     tabla_procesos.add_column("Tiempo de Retorno", justify="right")
+    tabla_procesos.add_column("Tiempo de Espera", justify="right")
     tabla_procesos.add_column("Estado Final", justify="right")
 
-    # Calcular los tiempos de espera y retorno para cada proceso
     for proceso in procesos:
-        # Tiempo de espera: tiempo de ejecución total menos el tiempo de irrupción menos el tiempo de arribo
-        tiempo_espera = proceso.tiempo_restante + proceso.tiempo_de_arribo - proceso.tiempo_de_irrupcion
-        # Tiempo de retorno: tiempo de ejecución total menos el tiempo de arribo
-        tiempo_retorno = proceso.tiempo_restante + proceso.tiempo_de_arribo
-
-        # Agregar los tiempos a la tabla
+        # Calcular TR (Tiempo de Retorno) y TE (Tiempo de Espera)
+        tr = proceso.momento_terminacion - proceso.tiempo_de_arribo  # Esto puede ajustarse según cómo manejas el tiempo
+        te = tr - proceso.tiempo_de_irrupcion
         tabla_procesos.add_row(
             str(proceso.pid),
             str(proceso.tiempo_de_arribo),
             str(proceso.tiempo_de_irrupcion),
-            str(tiempo_espera),
-            str(tiempo_retorno),
+            str(tr),
+            str(te),
             "Terminado" if proceso.tiempo_restante == 0 else "No completado"
         )
 
-    # Imprimir tabla de procesos
     console.print(tabla_procesos)
 
-    # Imprimir los tiempos promedio de espera, retorno y respuesta
+    # Imprimir tiempos promedio
     print("\nEstadísticas Globales:")
-    print(f"Tiempo promedio de espera: {tiempos['promedio_espera']:.2f}")
-    print(f"Tiempo promedio de retorno: {tiempos['promedio_retorno']:.2f}")
-    print(f"Tiempo promedio de respuesta: {tiempos['promedio_respuesta']:.2f}")
+    print(f"Tiempo promedio de espera: {tiempos['promedio_espera']:.2f} unidades de tiempo.")
+    print(f"Tiempo promedio de retorno: {tiempos['promedio_retorno']:.2f} unidades de tiempo.")
 
-    # Cálculo del rendimiento del sistema
-    trabajos_terminados = sum(1 for proceso in procesos if proceso.tiempo_restante == 0)
-    rendimiento = trabajos_terminados / tiempo_total_ejecucion if tiempo_total_ejecucion > 0 else 0
-
-    # Imprimir el rendimiento del sistema
-    print(f"\nRendimiento del sistema: {rendimiento:.2f} trabajos por unidad de tiempo.")
+    # Calcular y mostrar el rendimiento del sistema
+    trabajos_terminados = len([p for p in procesos if p.tiempo_restante == 0])
+    rendimiento = trabajos_terminados / tiempo_total_ejecucion
+    print(f"Rendimiento del sistema: {rendimiento:.2f} trabajos por unidad de tiempo.")
 
 if __name__ == "__main__":
     sumaTEP = 0
@@ -318,10 +330,6 @@ if __name__ == "__main__":
 
     listo_susp = deque()
     
-    #print(gestor_memoria.particiones[0].info())
-    print(' ')
-    discos(gestor_memoria)
-    print(' ')
     metodo = input("Seleccione el método de carga de procesos (1: manual/2: archivo): ").strip().lower()
     print('---------------------------------------------------------------------')
     if metodo == '1':
@@ -337,16 +345,9 @@ if __name__ == "__main__":
         gestor_procesos.ejecutar_procesos(gestor_memoria)
     
     fin = time.time()
-    '''
     print(' ')
     print('Lista de Procesos Totales: ')
-    for i in range(num_procesos):
-        
-        print(listafinal[i].show())
-        print('____________________')
-        time.sleep(1)
-    '''
-     # Calcular tiempos promedio
+    # Calcular tiempos promedio
     tiempos_promedio = calcular_tiempos(listafinal, gestor_procesos.quantum)
 
     # Calcular tiempo total de ejecución
