@@ -110,6 +110,7 @@ class GestorDeProcesos:
                 print(' ')
                 print(' ')
                 input("Presionar Enter para analizar el siguiente proceso")
+                
 
                 # Intenta cargar un proceso de listo_susp si hay espacio en memoria
                 if listo_susp:
@@ -201,6 +202,8 @@ def discos(memo):
 
 def mostrar_estado(procesos, gestor_memoria):
     # Tabla de particiones
+    print(' ')
+    print(' ')
     tabla_particiones = Table(title="Particiones de Memoria")
     tabla_particiones.add_column("Partición")
     tabla_particiones.add_column("Tamaño")
@@ -323,6 +326,7 @@ def generar_informe(procesos, tiempos, tiempo_total_ejecucion):
     trabajos_terminados = len([p for p in procesos if p.tiempo_restante == 0])
     rendimiento = trabajos_terminados / tiempo_total_ejecucion
     print(f"Rendimiento del sistema: {rendimiento:.2f} trabajos por unidad de tiempo.")
+    input("Presionar Enter para finalizar el programa")
 
 if __name__ == "__main__":
     sumaTEP = 0
@@ -336,7 +340,11 @@ if __name__ == "__main__":
 
     listo_susp = deque()
     
-    metodo = input("Seleccione el método de carga de procesos (1: manual/2: archivo): ").strip().lower()
+    
+    print("Bienvenido al simulador del equipo Lil Tux!")
+    print(' ')
+
+    metodo = input("Seleccione el método de carga de procesos (1: Si quiere ingresas los procesos de forma manual /2: si desea seleccionar un archivo): ").strip().lower()
     print('---------------------------------------------------------------------')
     if metodo == '1':
         procesos = cargar_procesos_manual()
