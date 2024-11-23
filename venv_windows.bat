@@ -1,34 +1,52 @@
 @echo off
+setlocal
 
-set VENV_NAME=.venv
+:: Configuración inicial
+set "VENV_NAME=.venv"
+set "REQUIREMENTS_FILE=requirements.txt"
 
-echo Iniciando Entorno Virtual...
+echo Iniciando configuración del proyecto Python...
 
+:: Crear el entorno virtual si no existe
 if not exist "%VENV_NAME%" (
-    echo * Creando entorno virtual (%VENV_NAME%)...
-    python -m venv %VENV_NAME%
+    echo Creando entorno virtual en "%VENV_NAME%"...
+    python -m venv "%VENV_NAME%"
+    if errorlevel 1 (
+        echo Error al crear el entorno virtual. Verifica tu instalación de Python.
+        pause
+        exit /b 1
+    )
     echo Entorno virtual creado.
 ) else (
-    echo El entorno virtual (%VENV_NAME%) ya existe.
+    echo El entorno virtual ya existe en "%VENV_NAME%".
 )
 
-echo * Activando el entorno virtual...
-call %VENV_NAME%\Scripts\activate
-
-set REQUIREMENTS_FILE=requirements.txt
+:: Verificar si el archivo requirements.txt existe
 if not exist "%REQUIREMENTS_FILE%" (
-    echo * Creando archivo %REQUIREMENTS_FILE%...
-    :: echo # Lista de librerias para el proyecto > %REQUIREMENTS_FILE%
+    echo Creando archivo %REQUIREMENTS_FILE%...
+    echo # Lista de librerías para el proyecto > "%REQUIREMENTS_FILE%"
 ) else (
-    echo %REQUIREMENTS_FILE% ya existe.
+    echo El archivo %REQUIREMENTS_FILE% ya existe.
 )
 
-for /f %%i in ('findstr /r /c:".*" %REQUIREMENTS_FILE%') do (
-    echo * Instalando dependencias desde %REQUIREMENTS_FILE%...
-    pip install -r %REQUIREMENTS_FILE%
-    goto :end_install
+:: Instalar dependencias si el archivo no está vacío
+if exist "%REQUIREMENTS_FILE%" (
+    for /f "tokens=*" %%a in ('type "%REQUIREMENTS_FILE%"') do (
+        if not "%%a"=="" (
+            echo Instalando dependencias desde %REQUIREMENTS_FILE%...
+            pip install -r "%REQUIREMENTS_FILE%"
+            goto :end
+        )
+    )
+    echo El archivo %REQUIREMENTS_FILE% está vacío. No hay dependencias por instalar.
 )
-echo %REQUIREMENTS_FILE% está vacío. No hay dependencias por instalar.
-:end_install
 
-echo Listo para usar :D
+:end
+:: Activar el entorno virtual
+echo Activando el entorno virtual...
+call "%VENV_NAME%\Scripts\activate.bat"
+
+call cls
+echo Ya estas dentro del entorno virtual con todas las dependencias necesarias
+:: Mantener la ventana abierta
+cmd /k
