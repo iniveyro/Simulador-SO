@@ -478,7 +478,6 @@ def generar_informe(procesos, tiempos, tiempo_total_ejecucion):
     print(f"Rendimiento del sistema: {rendimiento:.2f} trabajos por unidad de tiempo.")
     input("Presionar Enter para finalizar el programa")
 
-
 if __name__ == "__main__":
     sumaTEP = 0
     sumaTA = 0
