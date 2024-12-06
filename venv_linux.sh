@@ -1,34 +1,45 @@
 #!/bin/bash
 
-VENV_NAME=".venv"
+# Configuración inicial
+VENV_DIR=".venv"
+REQ_FILE="requirements.txt"
 
-echo "Iniciando Entorno Virtual..."
+echo "Iniciando configuración del entorno virtual..."
 
-if [ ! -d "$VENV_NAME" ]; then
-    echo " - Creando entorno virtual ($VENV_NAME)..."
-    python3 -m venv $VENV_NAME
+# Crear el entorno virtual si no existe
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creando entorno virtual en $VENV_DIR..."
+    python3 -m venv "$VENV_DIR"
+    if [ $? -ne 0 ]; then
+        echo "Error: No se pudo crear el entorno virtual."
+        exit 1
+    fi
     echo "Entorno virtual creado."
 else
-    echo "El entorno virtual ($VENV_NAME) ya existe."
+    echo "El entorno virtual ya existe."
 fi
 
-echo " - Activando el entorno virtual..."
-source $VENV_NAME/bin/activate
-
-REQUIREMENTS_FILE="requirements.txt"
-if [ ! -f "$REQUIREMENTS_FILE" ]; then
-    echo " - Creando archivo $REQUIREMENTS_FILE..."
-    touch $REQUIREMENTS_FILE
-    #echo " - # Listado de librerías para el proyecto" > $REQUIREMENTS_FILE
+# Crear el archivo requirements.txt si no existe
+if [ ! -f "$REQ_FILE" ]; then
+    echo "Creando archivo $REQ_FILE..."
+    echo "# Lista de dependencias del proyecto" > "$REQ_FILE"
 else
-    echo "$REQUIREMENTS_FILE ya existe."
+    echo "El archivo $REQ_FILE ya existe."
 fi
 
-if [ -s "$REQUIREMENTS_FILE" ]; then
-    echo " - Instalando dependencias desde $REQUIREMENTS_FILE..."
-    pip install -r $REQUIREMENTS_FILE
+# Instalar dependencias desde requirements.txt
+if [ -s "$REQ_FILE" ]; then
+    echo "Instalando dependencias desde $REQ_FILE..."
+    "$VENV_DIR/bin/pip" install -r "$REQ_FILE"
 else
-    echo "$REQUIREMENTS_FILE está vacío. No hay dependencias por instalar."
+    echo "El archivo $REQ_FILE está vacío. No hay dependencias para instalar."
 fi
 
-echo "Listo para usar :D"
+# Activar el entorno virtual en la sesión actual
+echo "Activando el entorno virtual..."
+source ".venv/bin/activate"
+
+# Mantener el entorno activado para el usuario
+echo "El entorno virtual está activo. ¡Listo para trabajar!"
+#exec "$SHELL"
+
